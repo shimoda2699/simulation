@@ -1,0 +1,73 @@
+/*
+VOICE: 授業で使う道具。落ち着いていて、迷わず次に進める
+IDEA: 班で書き込むワークシートと、それを動かす実験台
+PICTURE: タブ1は記入用紙＋右に組み上がるプロンプト、タブ2はコードと結果が並ぶ実験台
+COLOUR and TYPE: 紺を主に、ティールを補助、たこ焼きのソース色のオレンジを強調。BIZ UDPゴシック
+LAYOUT: 上にタブ、2列（狭い画面では1列）
+*/
+:root{color-scheme:light dark;
+--bg:light-dark(#f4f6f9,#11161d);--card:light-dark(#ffffff,#1a212b);--ink:light-dark(#1e2430,#e8edf3);
+--mute:light-dark(#5d6775,#9aa6b4);--line:light-dark(#d6dde6,#2c3644);--navy:light-dark(#1f3a5f,#8fb4dd);
+--teal:light-dark(#1a7f7a,#5cc4bd);--acc:light-dark(#d9691a,#f0a060);--soft:light-dark(#eef3f7,#202a36);
+--code:light-dark(#fbfcfe,#0d1218);--warn:light-dark(#b42318,#ff8a80)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "BIZ UDPGothic","Hiragino Sans","Yu Gothic",sans-serif;overflow-x:clip}
+header{background:#1f3a5f;color:#fff;padding:14px max(4vw,16px) 0}
+header h1{margin:0 0 10px;font-size:clamp(20px,3vw,26px);line-height:1.2}
+header p{margin:0 0 12px;color:#c9d6e6;font-size:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{border:0;border-radius:10px 10px 0 0;padding:12px 18px;font:inherit;font-weight:700;cursor:pointer;background:#2c4f7c;color:#dbe6f3;min-height:44px}
+.tab[aria-selected=true]{background:var(--bg);color:var(--navy)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+main{padding:20px max(4vw,16px) 40px;max-width:1400px;margin:0 auto}
+.panel[hidden]{display:none}
+.grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{margin:0 0 4px;font-size:19px;color:var(--navy)}
+.card h3{margin:18px 0 8px;font-size:16px;color:var(--teal)}
+.hint{color:var(--mute);font-size:14px;margin:0 0 10px}
+label{display:block;font-weight:700;font-size:14px;margin:10px 0 4px}
+label small{font-weight:400;color:var(--mute)}
+input,select,textarea{width:100%;font:16px/1.5 inherit;font-family:inherit;color:var(--ink);background:var(--code);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px}
+textarea{resize:vertical}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:flex;align-items:center;gap:6px;font-weight:400;margin:0;background:var(--soft);border-radius:8px;padding:8px 12px;min-height:44px;cursor:pointer}
+.checks input{width:20px;min-height:20px;height:20px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button,.btn{font:inherit;font-weight:700;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 16px;min-height:44px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.sec{background:var(--navy);border-color:var(--navy);color:light-dark(#fff,#11161d)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.sticky{position:sticky;top:12px}
+@media(max-width:900px){.sticky{position:static}}
+#prompt{min-height:420px;font-size:14px;line-height:1.55;white-space:pre-wrap}
+.meter{display:flex;align-items:center;gap:10px;margin:8px 0 12px;font-size:14px}
+.meter .bar{flex:1;height:10px;background:var(--soft);border-radius:6px;overflow:hidden}
+.meter .bar i{display:block;height:100%;background:var(--teal);width:0;transition:width .3s}
+.missing{color:var(--warn);font-size:14px;margin:6px 0 0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f3a5f;color:#fff;padding:12px 20px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90vw}
+.toast.on{opacity:1}
+.steps{margin:6px 0 0;padding-left:1.3em;color:var(--mute);font-size:14px}
+/* tab2 */
+.status{font-size:14px;color:var(--mute);display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--mute);flex:none}
+.dot.ok{background:#22a06b}.dot.busy{background:var(--acc);animation:p 1s infinite}
+@keyframes p{50%{opacity:.3}}
+@media(prefers-reduced-motion:reduce){.dot.busy{animation:none}.meter .bar i{transition:none}}
+.editor{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--code);height:min(62vh,560px)}
+.gutter{padding:10px 6px;text-align:right;color:var(--mute);font:14px/1.5 ui-monospace,Consolas,"Courier New",monospace;user-select:none;overflow:hidden;background:var(--soft);min-width:3em;white-space:pre}
+#code{border:0;border-radius:0;flex:1;font:14px/1.5 ui-monospace,Consolas,"Courier New",monospace;padding:10px;white-space:pre;overflow:auto;resize:none;height:100%;tab-size:4}
+#out{background:#0f1720;color:#e6edf3;border-radius:10px;padding:12px;font:14px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;min-height:180px;max-height:360px;overflow:auto;margin:0}
+#out .e{color:#ff9b8f}#out .s{color:#8fb4dd}
+.tip{background:light-dark(#fff4e8,#2b2218);border:1px solid light-dark(#f3c79a,#6b4a2a);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:14px}
+.tip[hidden]{display:none}
+#figs{display:grid;gap:12px;margin-top:12px}
+#figs figure{margin:0;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px}
+#figs img{width:100%;height:auto;display:block}
+#figs figcaption{font-size:13px;color:#5d6775;text-align:right}
+details{margin-top:12px;font-size:14px}
+summary{cursor:pointer;font-weight:700;color:var(--navy);min-height:32px}
+kbd{border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:13px}

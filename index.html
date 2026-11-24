@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>待ち行列シミュレーション工房</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>待ち行列シミュレーション工房</h1>
+  <p>設計を書き込んで Copilot にプログラムを作ってもらい、そのプログラムをここで動かして確かめます。</p>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t1" aria-controls="p1" aria-selected="true">① 設計して Copilot へ</button>
+    <button class="tab" role="tab" id="t2" aria-controls="p2" aria-selected="false">② Python で実行</button>
+  </div>
+</header>
+
+<main>
+<!-- ===== タブ1 ===== -->
+<section class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+<div class="grid">
+  <form class="card" id="design" autocomplete="off">
+    <h2>モデルの設計シート</h2>
+    <p class="hint">ワークシートで考えたことを書き込もう。書いた内容は右のプロンプトに自動で反映されます。</p>
+    <div class="meter"><span id="mtxt">記入 0 / 0</span><div class="bar"><i id="mbar"></i></div></div>
+
+    <label for="team">班</label>
+    <input id="team" placeholder="例：3班">
+
+    <h3>1. 目的</h3>
+    <label for="purpose">何を調べたいか <small>（必須）</small></label>
+    <textarea id="purpose" rows="2" data-req placeholder="例：文化祭のたこ焼き屋の行列で、お客さんが焼き上がりまで待つ時間を調べ、短くする方法を比べたい"></textarea>
+
+    <h3>2. お客さん（到着）</h3>
+    <label for="arrMode">来方の表し方 <small>（必須）</small></label>
+    <select id="arrMode" data-req>
+      <option value="">選んでください</option>
+      <option value="p">1分ごとに、ある確率で1人来る</option>
+      <option value="i">到着間隔を乱数で決める</option>
+    </select>
+    <div class="row">
+      <div><label for="arrVal">確率 または 平均の到着間隔 <small>（必須）</small></label><input id="arrVal" data-req placeholder="例：0.67 または 1.5分"></div>
+      <div><label for="buy">1人が買う量</label><input id="buy" placeholder="例：1セット（1人分）"></div>
+    </div>
+
+    <h3>3. お店（サービス）</h3>
+    <div class="row">
+      <div><label for="servers">窓口・鉄板の数 <small>（必須）</small></label><input id="servers" data-req placeholder="例：鉄板1枚"></div>
+      <div><label for="batch">1回に処理できる人数 <small>（必須）</small></label><input id="batch" data-req placeholder="例：3人分"></div>
+      <div><label for="service">サービス時間 <small>（必須）</small></label><input id="service" data-req placeholder="例：焼き時間5分（一定）"></div>
+    </div>
+    <label for="startRule">サービスを始めるルール <small>（必須）</small></label>
+    <textarea id="startRule" rows="2" data-req placeholder="例：待っている人がいて鉄板が空いていたら焼き始める。余った分は次に来た人に渡す"></textarea>
+
+    <h3>4. 時間と順番</h3>
+    <div class="row">
+      <div><label for="duration">シミュレーションする時間 <small>（必須）</small></label><input id="duration" data-req placeholder="例：180分（受付終了後は行列がなくなるまで続ける）"></div>
+      <div><label for="step">時間の進め方</label>
+        <select id="step"><option value="1分ずつ進める">1分ずつ進める</option><option value="お客さんが来たときや焼き上がったときなど、出来事ごとに進める">出来事ごとに進める</option></select></div>
+    </div>
+    <label for="order">1分ごとの処理の順番 <small>（フローチャートの順に）</small></label>
+    <textarea id="order" rows="5" placeholder="例：&#10;1. 乱数でお客さんが来たら行列に加える&#10;2. 焼いている途中なら残り時間を1減らし、0になったら余りを3増やす&#10;3. 余りがあれば先頭の人に渡し、待ち時間を記録する&#10;4. 鉄板が空いていて行列に人がいれば焼き始める&#10;5. 行列の最大人数を記録する&#10;6. 時刻を1分進める"></textarea>
+    <label for="vars">使う変数の名前と意味</label>
+    <textarea id="vars" rows="4" placeholder="例：&#10;eigyo：営業時間（分）&#10;kakuritsu：1分間に1人来る確率&#10;yaki_jikan：焼き時間（分）"></textarea>
+
+    <h3>5. 結果</h3>
+    <label for="waitdef">待ち時間の定義 <small>（必須）</small></label>
+    <input id="waitdef" data-req placeholder="例：並んだ時刻から、焼き上がって受け取った時刻まで">
+    <label>表示したいもの</label>
+    <div class="checks" id="outs">
+      <label><input type="checkbox" value="平均待ち時間" checked>平均待ち時間</label>
+      <label><input type="checkbox" value="最長の待ち時間" checked>最長の待ち時間</label>
+      <label><input type="checkbox" value="行列の最大人数" checked>行列の最大人数</label>
+      <label><input type="checkbox" value="売れた数（サービスした人数）">売れた数</label>
+      <label><input type="checkbox" value="時刻ごとの行列の人数の折れ線グラフ">グラフ：行列の人数の変化</label>
+      <label><input type="checkbox" value="一人ひとりの待ち時間の棒グラフ">グラフ：一人ひとりの待ち時間</label>
+    </div>
+    <div class="row">
+      <div><label for="trials">試行回数</label><input id="trials" placeholder="例：5回試して平均を出す"></div>
+      <div><label for="improve">比べたい改善案</label><input id="improve" placeholder="例：鉄板2枚、焼き時間4分"></div>
+    </div>
+    <label for="other">そのほかの条件・お願い</label>
+    <textarea id="other" rows="2" placeholder="例：途中で帰る人は考えない"></textarea>
+
+    <div class="btns">
+      <button type="button" id="sample">見本（タコ丸）を入れる</button>
+      <button type="button" id="reset">すべて消す</button>
+    </div>
+  </form>
+
+  <div class="card sticky">
+    <h2>Copilot へのプロンプト</h2>
+    <p class="hint">内容を確かめてからコピーしよう。ここで直接書き足すこともできます。</p>
+    <textarea id="prompt" aria-label="Copilotへのプロンプト"></textarea>
+    <p class="missing" id="missing" hidden></p>
+    <div class="btns">
+      <button type="button" class="pri" id="copy">プロンプトをコピー</button>
+      <a class="btn sec" id="openM365" href="https://m365.cloud.microsoft/chat" target="_blank" rel="noopener">コピーして Copilot（学校アカウント）を開く</a>
+      <a class="btn" id="openWeb" href="https://copilot.microsoft.com/" target="_blank" rel="noopener">コピーして Copilot（一般）を開く</a>
+    </div>
+    <ol class="steps">
+      <li>Copilot の入力欄に貼り付けて送信する</li>
+      <li>返ってきた Python のコードをコピーする</li>
+      <li>「② Python で実行」タブに貼り付けて実行する</li>
+    </ol>
+  </div>
+</div>
+</section>
+
+<!-- ===== タブ2 ===== -->
+<section class="panel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+<div class="grid">
+  <div class="card">
+    <h2>Python のコード</h2>
+    <p class="hint">Copilot が作ったコードを貼り付けて「実行」。<kbd>Ctrl</kbd>＋<kbd>Enter</kbd> でも実行できます。</p>
+    <div class="editor">
+      <div class="gutter" id="gutter" aria-hidden="true">1</div>
+      <textarea id="code" spellcheck="false" aria-label="Pythonのコード" placeholder="ここに Python のコードを貼り付けます"></textarea>
+    </div>
+    <div class="btns">
+      <button type="button" class="pri" id="run" disabled>▶ 実行</button>
+      <button type="button" id="stop" disabled>■ 止める</button>
+      <button type="button" id="paste">貼り付け</button>
+      <button type="button" id="copyCode">コードをコピー</button>
+      <button type="button" id="loadSample">見本プログラム</button>
+      <button type="button" id="clearCode">コードを消す</button>
+    </div>
+    <details>
+      <summary>input() を使うプログラムのとき</summary>
+      <label for="stdin">入力する値（1行に1つ。上から順に使われます）</label>
+      <textarea id="stdin" rows="3" placeholder="例：&#10;0.67&#10;5"></textarea>
+    </details>
+  </div>
+
+  <div class="card sticky">
+    <h2>実行結果</h2>
+    <div class="status"><span class="dot busy" id="dot"></span><span id="stat">Python を準備しています…（初回は少し時間がかかります）</span></div>
+    <div class="btns" style="margin-top:8px"><button type="button" id="clearOut">結果を消す</button></div>
+    <pre id="out" aria-live="polite"></pre>
+    <div class="tip" id="tip" hidden></div>
+    <div id="figs"></div>
+  </div>
+</div>
+</section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
