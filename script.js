@@ -11,59 +11,95 @@ tabs.forEach(([t],i)=>t.addEventListener('click',()=>show(i)));
 show(Number(store.get('qs_tab'))||0);
 
 /* ---------- タブ1：設計 → プロンプト ---------- */
-const F=['team','purpose','arrMode','arrVal','buy','servers','batch','service','startRule','duration','step','order','vars','waitdef','trials','improve','other'];
-const v=id=>$(id).value.trim();
+const form=$('design');
+const MULTI=['purpose','outs','change','exclude'];
+function data(){const fd=new FormData(form);const d={};for(const [k,val] of fd.entries()){if(MULTI.includes(k))(d[k]=d[k]||[]).push(val);else d[k]=String(val).trim()}MULTI.forEach(k=>d[k]=d[k]||[]);return d}
+const num=x=>x===''||x===undefined?NaN:Number(x);
+const r2=x=>Math.round(x*100)/100;
+function calc(d){const T=num(d.recTime),N=num(d.recN),S=num(d.service),P=num(d.teppan),K=num(d.ikkai);
+  return {kankaku:T>0&&N>0?r2(T/N):null,kuru:T>0&&N>=0&&!isNaN(N)?r2(N/T):null,tsukuru:S>0&&P>0&&K>0?r2(K*P/S):null}}
 let edited=false;
-function outs(){return [...document.querySelectorAll('#outs input:checked')].map(x=>x.value)}
-function build(){
-  const arr=v('arrMode')==='p'?`1分ごとに、確率 ${v('arrVal')||'（未記入）'} で1人来る（乱数で決める）`:v('arrMode')==='i'?`到着間隔を乱数で決める（平均 ${v('arrVal')||'（未記入）'}）`:'';
-  const L=[];
+const OUTS={cmp:'試行回数分の平均（来た人数・平均待ち時間・最長の待ち時間・行列の最大人数）と、去年の記録を並べた比較表',spread:'1回の平均待ち時間が、試行ごとにどのくらいばらつくか（下位1割〜上位1割の範囲）',t30:'1日分について、営業記録と同じ30分ごとの表（並んだ人数・平均待ち時間）',gq:'1日分の、行列の人数の変化のグラフ（横軸：開店からの時間、縦軸：行列の人数）',gh:'試行ごとの平均待ち時間のヒストグラム（去年の記録の位置に線を引く）'};
+const CALC={each:'お客さん1人ずつ、到着時刻 → 焼き始める時刻 → 受け取る時刻 の順に計算する（教科書の待ち行列の表と同じ考え方）。1日分の計算は関数にまとめる',min:'時刻を1分ずつ進め、毎分「来る・焼く・渡す」を調べる'};
+const DIST={exp:'到着間隔は指数分布の乱数にする（到着間隔 ＝ −平均の到着間隔 × log(1 − random.random())）。ばらばらにやってくる客を表すため',uni:'到着間隔は、0から平均の2倍までの一様な乱数にする（random.uniform(0, 2 × 平均の到着間隔)）',prob:'1分ごとに、確率 KAKURITSU（＝1 ÷ 平均の到着間隔）で1人来るとする（random.random() < KAKURITSU）'};
+function isEmpty(d){return !Object.entries(d).some(([k,val])=>k!=='team'&&(Array.isArray(val)?val.length:val))}
+function build(d){
+  const c=calc(d);const L=[];const sec=(h,x)=>{if(x)L.push('',`【${h}】`,x)};
+  const li=a=>a.filter(Boolean).join('\n');const has=x=>x!==undefined&&x!=='';
   L.push('あなたは高校「情報Ⅰ」の学習を手伝うアシスタントです。次の設計にしたがって、待ち行列のシミュレーションを行う Python プログラムを作ってください。');
-  const sec=(h,x)=>{if(x)L.push('',`【${h}】`,x)};
-  sec('目的',v('purpose'));
-  sec('お客さん（到着）',[arr&&'- 来方：'+arr,v('buy')&&'- 1人が買う量：'+v('buy')].filter(Boolean).join('\n'));
-  sec('お店（サービス）',[v('servers')&&'- 窓口・鉄板の数：'+v('servers'),v('batch')&&'- 1回に処理できる人数：'+v('batch'),v('service')&&'- サービス時間：'+v('service'),v('startRule')&&'- サービスを始めるルール：'+v('startRule')].filter(Boolean).join('\n'));
-  sec('時間',[v('duration')&&'- シミュレーションする時間：'+v('duration'),'- 時間の進め方：'+v('step')].filter(Boolean).join('\n'));
-  sec('処理の順番（この順に1回ずつ繰り返す）',v('order'));
-  sec('使う変数（この名前を使うこと）',v('vars'));
-  sec('待ち時間の定義',v('waitdef'));
-  const o=outs();sec('結果として表示するもの',o.map(x=>'- '+x).join('\n'));
-  sec('試行回数',v('trials'));
-  sec('比べたい改善案',v('improve'));
-  sec('そのほかの条件',v('other'));
+  sec('目的',li([...d.purpose.map(x=>'- '+x),has(d.purposeOther)&&'- '+d.purposeOther]));
+  sec('去年の記録（シミュレーションが去年を再現できているかの答え合わせに使う）',li([has(d.recTime)&&`- 営業時間：${d.recTime}分`,has(d.recN)&&`- 来た人数：${d.recN}人`,has(d.recAvg)&&`- 平均待ち時間：${d.recAvg}分`,has(d.recMax)&&`- 最長の待ち時間：${d.recMax}分`,has(d.recQ)&&`- 行列の最大人数：${d.recQ}人`]));
+  sec('計算のしかた',CALC[d.calc]||'');
+  sec('お客さん（到着）',li([c.kankaku!==null&&`- 平均の到着間隔：営業時間 ÷ 来た人数 ＝ ${d.recTime} ÷ ${d.recN} ≒ ${c.kankaku}分`,has(d.arrConst)&&`- 到着間隔は${d.arrConst}`,DIST[d.dist]&&'- '+DIST[d.dist],d.buy==='other'?(has(d.buyOther)&&'- 1人が買う量：'+d.buyOther):(has(d.buy)&&'- 1人が買う量：'+d.buy),c.kuru!==null&&`- 来る速さ：1分あたり約${c.kuru}人`]));
+  sec('お店（サービス）',li([has(d.work)&&`- お客さんを待たせている作業（サービス）：${d.work}。この作業だけをモデルにする`,has(d.service)&&`- サービス時間：${d.service}分（一定）`,has(d.teppan)&&`- 同時に作業できる場所：鉄板${d.teppan}枚`,has(d.ikkai)&&`- 1回の作業で${d.ikkai}人分できる`,c.tsukuru!==null&&`- 作る速さ：1分あたり${c.tsukuru}人分`,has(d.startTime)&&`- 作業を始める時刻：「来た時刻」と「${d.startTime}」の大きいほう`,has(d.start)&&'- いつ焼き始めるか：'+d.start,d.give==='other'?(has(d.giveOther)&&'- 誰から渡すか：'+d.giveOther):(has(d.give)&&'- 誰から渡すか：'+d.give),has(d.close)&&'- 受付を締め切ったあと：'+d.close]));
+  sec('処理の順番',d.order);
+  const tr=d.trials==='other'?d.trialsOther:d.trials;
+  const P=[];
+  if(has(d.recTime))P.push(`EIGYO = ${d.recTime}          # 営業時間（分）`);
+  if(has(d.recN))P.push(`KYAKU = ${d.recN}          # 去年来た人数（人）`);
+  if(has(d.recTime)&&has(d.recN))P.push('HEIKIN_KANKAKU = EIGYO / KYAKU   # 平均の到着間隔（分）');
+  if(d.dist==='prob')P.push('KAKURITSU = 1 / HEIKIN_KANKAKU    # 1分間に1人来る確率');
+  if(has(d.service))P.push(`YAKI_JIKAN = ${d.service}      # サービス時間（焼き時間、分）`);
+  if(has(d.ikkai))P.push(`IKKAI_KAZU = ${d.ikkai}      # 1回で焼ける人数分`);
+  if(has(d.teppan))P.push(`TEPPAN = ${d.teppan}          # 鉄板の枚数`);
+  if(has(tr))P.push(`SHIKOU = ${tr}          # 何回くり返して平均をとるか（試行回数）`);
+  if(d.seed==='same')P.push('TANE = 1            # 乱数の種（random.seed(TANE) で毎回同じ乱数にする）');
+  const KR=[has(d.recAvg)&&`平均待ち ${d.recAvg}分`,has(d.recMax)&&`最長待ち ${d.recMax}分`,has(d.recQ)&&`最大行列 ${d.recQ}人`].filter(Boolean);
+  if(KR.length)P.push(`# 去年の記録（答え合わせ用）：${KR.join('、')} も変数にして先頭に書く`);
+  sec('パラメータ（プログラムの先頭にこの名前でまとめて書く）',P.join('\n'));
+  sec('ほかに使う変数',d.vars);
+  sec('待ち時間の定義',d.waitdef);
+  sec('試行回数と乱数',li([has(tr)&&`- ${tr}回くり返して平均をとる`,d.seed==='same'&&'- 最初に random.seed(TANE) を実行し、何度実行しても同じ結果になるようにする',d.seed==='change'&&'- 乱数の種は決めない（実行するたびに結果が変わる）']));
+  sec('結果として表示するもの',d.outs.map(x=>'- '+OUTS[x]).join('\n'));
+  const ch=[...d.change.filter(x=>x!=='other'),d.change.includes('other')&&d.changeOther].filter(Boolean);
+  if(ch.length)sec('あとで値を変えて試したい条件',ch.join('、')+'\n（プログラムの先頭の値を書き換えるだけで試せるようにする。いろいろな値を比べる処理は入れなくてよい）');
+  if(d.exclude.length)sec('モデルに入れない情報（プログラムには入れない）',d.exclude.join('、')+(has(d.reason)?'\n理由：'+d.reason:''));
   L.push('','【プログラムの条件】',
   '- Python 3 で書く。使ってよいモジュールは random、math、statistics、matplotlib だけ（ブラウザ上の Python で動かすため）',
   '- input() は使わない',
-  '- 変更しやすいように、パラメータ（数値）はプログラムの最初にまとめて書き、日本語のコメントで意味を書く',
-  '- 処理のまとまりごとに日本語のコメントを入れる',
+  '- パラメータと去年の記録の値はプログラムの最初にまとめ、日本語のコメントで「何の値か」を書く',
+  '- 処理のまとまりごとに日本語のコメントを入れる。関数は使ってよいが、クラスは使わない',
   '- 結果は print で、単位をつけて日本語で表示する',
   '- お客さんが1人も来なかったときに、0で割るエラーにならないようにする',
-  '- グラフを描くときは matplotlib.pyplot を使い、最後に plt.show() を書く',
-  '- 高校生が読んで理解できる、短くわかりやすいコードにする（クラスは使わない）',
+  '- グラフを描くときは matplotlib.pyplot を使い、グラフごとに plt.show() を書く',
+  '- 高校生が読んで理解できる、わかりやすいコードにする',
   '- コードのあとに、設計のどの部分がコードのどこにあたるかを短く説明する');
   return L.join('\n');
 }
-function meter(){
-  const req=[...document.querySelectorAll('[data-req]')];const done=req.filter(e=>e.value.trim());
-  $('mtxt').textContent=`必須の記入 ${done.length} / ${req.length}`;$('mbar').style.width=(done.length/req.length*100)+'%';
-  const miss=req.filter(e=>!e.value.trim()).map(e=>document.querySelector(`label[for=${e.id}]`).childNodes[0].textContent.trim());
-  return miss;
+function missing(d){
+  return [...form.querySelectorAll('[data-req]')].filter(el=>{
+    if(el.matches('input,textarea,select'))return !el.value.trim();
+    return !el.querySelector('input:checked');}).map(el=>el.dataset.l);
 }
 function refresh(){
-  if(!edited)$('prompt').value=build();
-  const m=meter();const el=$('missing');el.hidden=!m.length;el.textContent=m.length?'まだ書いていない項目：'+m.join('、'):'';
-  const d={};F.forEach(k=>d[k]=$(k).value);d.outs=outs();store.set('qs_design',JSON.stringify(d));
+  const d=data();const c=calc(d);
+  $('oKankaku').textContent=c.kankaku??'';$('oKuru').textContent=c.kuru??'';$('oTsukuru').textContent=c.tsukuru??'';
+  const req=form.querySelectorAll('[data-req]').length;const m=missing(d);
+  $('mtxt').textContent=`必須の項目 ${req-m.length} / ${req}`;$('mbar').style.width=((req-m.length)/req*100)+'%';
+  const empty=isEmpty(d);
+  if(!edited)$('prompt').value=empty?'':build(d);
+  const el=$('missing');el.hidden=empty||!m.length;el.textContent=m.length?'まだ入力していない項目：'+m.join('、'):'';
+  store.set('qs_design3',JSON.stringify(d));
 }
-$('design').addEventListener('input',()=>{edited=false;refresh()});
-$('design').addEventListener('change',()=>{edited=false;refresh()});
+form.addEventListener('input',()=>{edited=false;refresh()});
+form.addEventListener('change',()=>{edited=false;refresh()});
 $('prompt').addEventListener('input',()=>{edited=true});
-function fill(d){F.forEach(k=>{if(d[k]!==undefined)$(k).value=d[k]});if(d.outs)document.querySelectorAll('#outs input').forEach(x=>x.checked=d.outs.includes(x.value));edited=false;refresh()}
-try{const s=JSON.parse(store.get('qs_design')||'null');if(s)fill(s)}catch(e){}
-$('sample').addEventListener('click',()=>fill({purpose:'文化祭のたこ焼き屋「タコ丸」の行列で、お客さんがたこ焼きの焼き上がりまで待つ時間を調べ、鉄板の枚数や焼き時間を変えたときにどれだけ短くなるかを比べたい',arrMode:'p',arrVal:'0.67',buy:'1人1セット（1人分）',servers:'鉄板1枚',batch:'1回に3人分',service:'焼き時間5分（一定）',startRule:'待っている人がいて鉄板が空いていたら焼き始める。焼き上がったら来た順に渡し、余った分は次に来た人に渡す',duration:'180分（180分を過ぎたら新しいお客さんは来ないが、行列がなくなるまで続ける）',step:'1分ずつ進める',order:'1. 乱数でお客さんが来たら、行列に並んだ時刻を加える\n2. 焼いている途中なら残り時間を1減らし、0になったら余りを3増やす\n3. 余りがあって行列に人がいる間、先頭の人に渡して待ち時間を記録する\n4. 鉄板が空いていて行列に人がいれば焼き始める\n5. 行列の人数が最大の記録より多ければ記録を更新する\n6. 時刻を1分進める',vars:'eigyo：営業時間（分）\nkakuritsu：1分間に1人来る確率\nyaki_jikan：焼き時間（分）\nikkai_kazu：1回に焼ける数\ngyoretsu：並んだ時刻のリスト\nnokori：焼き上がりまでの残り時間\namari：焼き上がって、まだ渡していない数\nmachi：待ち時間のリスト\nsaidai：行列の最大人数',waitdef:'並んだ時刻から、焼き上がって受け取った時刻まで',trials:'1回',improve:'鉄板2枚（1回に6人分と同じ）、焼き時間4分',other:'',outs:['平均待ち時間','最長の待ち時間','行列の最大人数','売れた数（サービスした人数）','時刻ごとの行列の人数の折れ線グラフ']}));
-$('reset').addEventListener('click',()=>{if($('reset').dataset.c){F.forEach(k=>$(k).value=k==='step'?'1分ずつ進める':'');document.querySelectorAll('#outs input').forEach((x,i)=>x.checked=i<3);edited=false;refresh();delete $('reset').dataset.c;$('reset').textContent='すべて消す'}else{$('reset').dataset.c=1;$('reset').textContent='もう一度押すと消えます';setTimeout(()=>{delete $('reset').dataset.c;$('reset').textContent='すべて消す'},3000)}});
+function fill(d){
+  form.reset();
+  for(const el of form.elements){if(!el.name)continue;const val=d[el.name];if(val===undefined)continue;
+    if(el.type==='radio')el.checked=el.value===val;else if(el.type==='checkbox')el.checked=Array.isArray(val)&&val.includes(el.value);else el.value=val;}
+  edited=false;refresh();
+}
+try{const s=JSON.parse(store.get('qs_design3')||'null');if(s)fill(s)}catch(e){}
+$('sample').addEventListener('click',()=>fill({recTime:'180',recN:'121',arrConst:'不規則',work:'たこ焼きを焼く',service:'5',teppan:'1',ikkai:'3',startTime:'鉄板が空く時刻',waitEnd:'焼き上がって受け取る',recAvg:'18.7',recMax:'31.3',recQ:'20',
+ purpose:['去年の行列をシミュレーションで再現する','そのあと、パラメータを変えて行列を短くする方法を試す'],calc:'each',dist:'exp',buy:'1人1セット',
+ start:'待っている人がいて、鉄板が空いていたら焼き始める',give:'来た順に渡し、余った分は次に来た人に渡す',close:'並んでいる人には全員売る',
+ waitdef:'並んでから、焼き上がって受け取るまで',trials:'200',seed:'same',outs:['cmp','t30','gq'],change:['鉄板の枚数','焼き時間','1回に焼ける人数分','平均の到着間隔'],
+ exclude:['価格','材料','場所・隣の店','係の人数','会計・箱・仕上げ・渡しの時間','「人が足りない」という意見'],reason:'焼き上がりまでの待ち時間に影響しないから。焼き以外の作業は焼いている間に終わり、係の手が空いていた'}));
+$('reset').addEventListener('click',()=>{if($('reset').dataset.c){fill({});delete $('reset').dataset.c;$('reset').textContent='すべて消す'}else{$('reset').dataset.c=1;$('reset').textContent='もう一度押すと消えます';setTimeout(()=>{delete $('reset').dataset.c;$('reset').textContent='すべて消す'},3000)}});
 async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch(_){}a.remove();return ok}}
-$('copy').addEventListener('click',async()=>toast(await copyText($('prompt').value)?'コピーしました。Copilot に貼り付けよう':'コピーできませんでした。プロンプトを選択してコピーしてください'));
-['openM365','openWeb'].forEach(id=>$(id).addEventListener('click',()=>{copyText($('prompt').value).then(ok=>toast(ok?'コピーしました。開いた Copilot に貼り付けよう':'コピーできませんでした'))}));
+$('copy').addEventListener('click',async()=>{if(!$('prompt').value){toast('まだ何も入力されていません');return}toast(await copyText($('prompt').value)?'コピーしました。Copilot に貼り付けよう':'コピーできませんでした。プロンプトを選択してコピーしてください')});
+['openM365','openWeb'].forEach(id=>$(id).addEventListener('click',()=>{if($('prompt').value)copyText($('prompt').value).then(ok=>toast(ok?'コピーしました。開いた Copilot に貼り付けよう':'コピーできませんでした'))}));
 refresh();
 
 /* ---------- タブ2：Python 実行環境（Pyodide を Web Worker で動かす） ---------- */
@@ -114,61 +150,134 @@ code.addEventListener('keydown',e=>{
 $('paste').addEventListener('click',async()=>{try{const t=await navigator.clipboard.readText();if(t){code.value=t;lines();toast('貼り付けました')}}catch(e){code.focus();toast('ここをクリックして Ctrl＋V で貼り付けてください')}});
 $('copyCode').addEventListener('click',async()=>toast(await copyText(code.value)?'コードをコピーしました':'コピーできませんでした'));
 $('clearCode').addEventListener('click',()=>{if($('clearCode').dataset.c){code.value='';lines();delete $('clearCode').dataset.c;$('clearCode').textContent='コードを消す'}else{$('clearCode').dataset.c=1;$('clearCode').textContent='もう一度押すと消えます';setTimeout(()=>{delete $('clearCode').dataset.c;$('clearCode').textContent='コードを消す'},3000)}});
-const SAMPLE=`# タコ丸 行列シミュレーション（見本）
+const SAMPLE=`# ============================================================
+# タコ丸 行列シミュレーション（去年の営業記録を再現する版）
+#   教科書 Theory 39 の表２と同じく「到着時刻・開始時刻・終了時刻」を
+#   お客さん1人ずつ計算していく方式で作っています。
+# ============================================================
 import random
+import math
+import statistics
 import matplotlib.pyplot as plt
 
-# ===== パラメータ =====
-eigyo = 180         # 営業時間（分）
-kakuritsu = 0.67    # 1分間にお客さんが1人来る確率
-yaki_jikan = 5      # 1回の焼き時間（分）
-ikkai_kazu = 3      # 1回に焼ける数（人分）
+# ===== パラメータ（去年の営業記録から決めた値）=====
+# ここの数値を変えると、いろいろな条件で試せます
+EIGYO = 180            # 営業時間（分）　　　記録：10:00〜13:00
+KYAKU = 121            # 去年来た人数（人）　記録：時間帯別の記録の合計
+HEIKIN_KANKAKU = EIGYO / KYAKU   # 平均の到着間隔 ≒ 1.49分
+YAKI_JIKAN = 5         # 焼き時間（分）　　　記録：空いている時に来た人の待ちがちょうど5分
+IKKAI_KAZU = 3         # 1回に焼ける人数分　記録：鉄板1枚で24個＝3パック
+TEPPAN = 1             # 鉄板の枚数
+SHIKOU = 200           # 何回試して平均をとるか
 
-# ===== 状態 =====
-jikoku = 0
-gyoretsu = []       # 並んだ時刻のリスト
-nokori = 0          # 焼き上がりまでの残り時間（0なら鉄板は空き）
-amari = 0           # 焼き上がって、まだ渡していない数
+# 去年の記録（答え合わせ用）
+KIROKU = {"人数": 121, "平均待ち": 18.7, "最長待ち": 31.3, "最大行列": 20}
 
-# ===== 結果 =====
-machi = []          # 一人ひとりの待ち時間
-saidai = 0          # 行列の最大人数
-kiroku = []         # 時刻ごとの行列の人数（グラフ用）
 
-while jikoku < eigyo or len(gyoretsu) > 0:
-    # お客さんが来る
-    if jikoku < eigyo and random.random() < kakuritsu:
-        gyoretsu.append(jikoku)
-    # 焼き進める
-    if nokori > 0:
-        nokori = nokori - 1
-        if nokori == 0:
-            amari = amari + ikkai_kazu
-    # 渡す
-    while amari > 0 and len(gyoretsu) > 0:
-        narabi = gyoretsu.pop(0)
-        machi.append(jikoku - narabi)
-        amari = amari - 1
-    # 焼き始める
-    if nokori == 0 and len(gyoretsu) > 0:
-        nokori = yaki_jikan
-    # 最大の行列を記録
-    if len(gyoretsu) > saidai:
-        saidai = len(gyoretsu)
-    kiroku.append(len(gyoretsu))
-    # 時刻を進める
-    jikoku = jikoku + 1
+def tochaku_kankaku(heikin):
+    """次のお客さんが来るまでの時間を乱数で決める。
+    ばらばらにやってくるお客さんの到着間隔は「指数分布」という形になる。
+    -平均 × log(1 − 乱数) で、平均が heikin になるばらつきを作れる。"""
+    return -heikin * math.log(1 - random.random())
 
-print("売れた数:", len(machi), "人")
-if len(machi) > 0:
-    print("平均待ち時間:", round(sum(machi) / len(machi), 1), "分")
-    print("最長の待ち時間:", max(machi), "分")
-print("行列の最大人数:", saidai, "人")
 
-plt.plot(kiroku)
-plt.title("行列の人数の変化")
+def simulate(heikin=HEIKIN_KANKAKU, yaki=YAKI_JIKAN, ikkai=IKKAI_KAZU, teppan=TEPPAN):
+    """1日分の営業をシミュレーションして、結果をまとめて返す"""
+    # --- お客さんの到着時刻を決める（教科書の「到着時刻＝前の到着時刻＋到着間隔」）---
+    tochaku = []
+    jikoku = 0
+    while True:
+        jikoku = jikoku + tochaku_kankaku(heikin)
+        if jikoku >= EIGYO:          # 営業時間を過ぎたら受付終了
+            break
+        tochaku.append(jikoku)
+
+    # --- 一人ずつ、受け取る時刻を決める ---
+    aki = [0.0] * teppan             # それぞれの鉄板が空く時刻
+    amari = []                       # 焼き上がった（焼いている）分の、受け取れる時刻
+    uketori = []
+    for t in tochaku:
+        if len(amari) == 0:
+            # 余りがないので、新しく焼く。一番早く空く鉄板を使う
+            k = aki.index(min(aki))
+            hajime = max(t, aki[k])  # 教科書と同じ：「来た時刻」と「鉄板が空く時刻」の大きいほう
+            aki[k] = hajime + yaki   # 焼き上がり時刻
+            amari = [aki[k]] * ikkai # 1回で ikkai 人分できる
+        # 余りの先頭を受け取る（焼き上がる前なら、焼き上がりまで待つ）
+        uketori.append(max(t, amari.pop(0)))
+
+    machi = [u - t for t, u in zip(tochaku, uketori)]
+
+    # --- 行列の最大人数：来たら+1、受け取ったら-1 を時刻の順にたどる ---
+    dekigoto = [(t, 1) for t in tochaku] + [(u, -1) for u in uketori]
+    dekigoto.sort(key=lambda x: (x[0], x[1]))   # 同じ時刻なら、先に受け取りを数える
+    ninzu = 0
+    saidai = 0
+    jikan = [0]
+    gyoretsu = [0]
+    for toki, zougen in dekigoto:
+        ninzu = ninzu + zougen
+        saidai = max(saidai, ninzu)
+        jikan.append(toki)          # グラフ用に、人数が変わった時刻と人数を記録
+        gyoretsu.append(ninzu)
+
+    return {
+        "人数": len(tochaku),
+        "平均待ち": statistics.mean(machi) if machi else 0,
+        "最長待ち": max(machi) if machi else 0,
+        "最大行列": saidai,
+        "到着": tochaku, "待ち": machi, "時刻": jikan, "行列": gyoretsu,
+    }
+
+
+def kurikaesu(kaisu=SHIKOU, tane=2025, **settei):
+    """同じ設定で何回も試して、平均をとる。
+    tane（乱数の種）をそろえると、パラメータを変えても同じお客さんの来方で比べられる"""
+    random.seed(tane)
+    kekka = [simulate(**settei) for _ in range(kaisu)]
+    heikin = {}
+    for k in ["人数", "平均待ち", "最長待ち", "最大行列"]:
+        heikin[k] = statistics.mean(r[k] for r in kekka)
+    return heikin, kekka
+
+
+# ============================================================
+# 1. 去年の状況を再現できているか（答え合わせ）
+# ============================================================
+heikin, kekka = kurikaesu()
+print(f"■ 今の設定で {SHIKOU} 回試した平均と、去年の記録の比較")
+print(f"{'':8}{'シミュレーション':>12}{'去年の記録':>10}")
+for k, tani in [("人数", "人"), ("平均待ち", "分"), ("最長待ち", "分"), ("最大行列", "人")]:
+    print(f"{k:8}{heikin[k]:>10.1f}{tani}{KIROKU[k]:>9}{tani}")
+
+machi_list = sorted(r["平均待ち"] for r in kekka)
+shita = machi_list[int(len(machi_list) * 0.1)]
+ue = machi_list[int(len(machi_list) * 0.9)]
+print(f"※ 平均待ちは1回ごとにばらつく（{SHIKOU}回のうち8割が {shita:.1f}〜{ue:.1f} 分）")
+
+# ============================================================
+# 2. 1日分の様子を、営業記録と同じ30分ごとの表にする
+# ============================================================
+ichinichi = kekka[0]
+print("\\n■ 1回分の時間帯別の様子（営業記録の表と同じ形）")
+print("時間帯        並んだ人数  平均待ち")
+for s in range(0, EIGYO, 30):
+    machi_s = [w for t, w in zip(ichinichi["到着"], ichinichi["待ち"]) if s <= t < s + 30]
+    hm = lambda x: f"{10 + x // 60}:{x % 60:02d}"
+    hw = statistics.mean(machi_s) if machi_s else 0
+    print(f"{hm(s)}〜{hm(s + 30)}  {len(machi_s):>6} 人  {hw:>6.1f} 分")
+
+# ============================================================
+# 3. グラフ
+# ============================================================
+# (1) 1日分の行列の人数の変化
+plt.figure(figsize=(7, 3.5))
+plt.step(ichinichi["時刻"], ichinichi["行列"], where="post")
+plt.axhline(KIROKU["最大行列"], color="gray", linestyle="--", label="去年の最大行列")
+plt.title("1日分の行列の人数の変化（今の設定）")
 plt.xlabel("開店からの時間（分）")
 plt.ylabel("行列の人数（人）")
+plt.legend()
 plt.show()
 `;
 $('loadSample').addEventListener('click',()=>{if(code.value.trim()&&!$('loadSample').dataset.c){$('loadSample').dataset.c=1;$('loadSample').textContent='もう一度押すと今のコードと入れ替えます';setTimeout(()=>{delete $('loadSample').dataset.c;$('loadSample').textContent='見本プログラム'},3000);return}delete $('loadSample').dataset.c;$('loadSample').textContent='見本プログラム';code.value=SAMPLE;lines();toast('見本プログラムを入れました')});

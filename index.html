@@ -24,69 +24,83 @@
 <div class="grid">
   <form class="card" id="design" autocomplete="off">
     <h2>モデルの設計シート</h2>
-    <p class="hint">ワークシートで考えたことを書き込もう。書いた内容は右のプロンプトに自動で反映されます。</p>
-    <div class="meter"><span id="mtxt">記入 0 / 0</span><div class="bar"><i id="mbar"></i></div></div>
-
+    <p class="hint">ワークシート（1時限目）の 2 と 3 に書いた内容を、同じ番号のところに入力・選択しよう。</p>
+    <div class="meter"><span id="mtxt"></span><div class="bar"><i id="mbar"></i></div></div>
     <label for="team">班</label>
-    <input id="team" placeholder="例：3班">
+    <input id="team" name="team" class="short">
 
-    <h3>1. 目的</h3>
-    <label for="purpose">何を調べたいか <small>（必須）</small></label>
-    <textarea id="purpose" rows="2" data-req placeholder="例：文化祭のたこ焼き屋の行列で、お客さんが焼き上がりまで待つ時間を調べ、短くする方法を比べたい"></textarea>
-
-    <h3>2. お客さん（到着）</h3>
-    <label for="arrMode">来方の表し方 <small>（必須）</small></label>
-    <select id="arrMode" data-req>
-      <option value="">選んでください</option>
-      <option value="p">1分ごとに、ある確率で1人来る</option>
-      <option value="i">到着間隔を乱数で決める</option>
-    </select>
+    <div class="ws">ワークシート 2　営業記録から取り出したパラメータ</div>
+    <table class="ptab">
+      <tr><th>営業時間</th><td><input type="number" min="1" step="any" name="recTime" data-req data-l="営業時間"> 分</td></tr>
+      <tr><th>来た人数</th><td><input type="number" min="0" step="1" name="recN" data-req data-l="来た人数"> 人</td></tr>
+      <tr><th>平均の到着間隔<small>（何分に1人来るか）</small></th><td>営業時間 ÷ 来た人数 ＝ <output id="oKankaku" class="calc"></output> 分</td></tr>
+      <tr><th>到着間隔は一定か</th><td class="opts"><label><input type="radio" name="arrConst" value="一定">一定</label><label><input type="radio" name="arrConst" value="不規則">不規則</label></td></tr>
+      <tr><th>お客さんを待たせている作業<small>（＝サービス）</small></th><td class="opts" data-req data-l="お客さんを待たせている作業"><label><input type="radio" name="work" value="会計">会計</label><label><input type="radio" name="work" value="たこ焼きを焼く">たこ焼きを焼く</label><label><input type="radio" name="work" value="箱の組み立て">箱の組み立て</label><label><input type="radio" name="work" value="渡す">渡す</label></td></tr>
+      <tr><th>サービス時間<small>（上の作業1回にかかる時間）</small></th><td><input type="number" min="0" step="any" name="service" data-req data-l="サービス時間"> 分（一定）</td></tr>
+      <tr><th>同時に作業できる場所の数</th><td>鉄板 <input type="number" min="1" step="1" name="teppan" data-req data-l="鉄板の枚数"> 枚</td></tr>
+      <tr><th>1回の作業で何人分できるか</th><td><input type="number" min="1" step="1" name="ikkai" data-req data-l="1回の作業で何人分"> 人分</td></tr>
+      <tr><th>作業を始める時刻</th><td>「来た時刻」と「<input name="startTime" class="mid">」の大きいほう</td></tr>
+      <tr><th>待ち時間は、いつからいつまでか</th><td>並んでから、<input name="waitEnd" class="mid">まで</td></tr>
+      <tr><th>1分あたりに来る人数<small>（来る速さ）</small></th><td>来た人数 ÷ 営業時間 ≒ <output id="oKuru" class="calc"></output> 人</td></tr>
+      <tr><th>1分あたりに作れる人数分<small>（作る速さ）</small></th><td>1回の人数分 × 鉄板 ÷ サービス時間 ＝ <output id="oTsukuru" class="calc"></output> 人分</td></tr>
+    </table>
+    <p class="sub">去年の結果（シミュレーションの答え合わせに使う）</p>
     <div class="row">
-      <div><label for="arrVal">確率 または 平均の到着間隔 <small>（必須）</small></label><input id="arrVal" data-req placeholder="例：0.67 または 1.5分"></div>
-      <div><label for="buy">1人が買う量</label><input id="buy" placeholder="例：1セット（1人分）"></div>
+      <div><label>平均待ち時間</label><input type="number" min="0" step="any" name="recAvg" data-req data-l="去年の平均待ち時間"> <span class="u">分</span></div>
+      <div><label>最長の待ち時間</label><input type="number" min="0" step="any" name="recMax"> <span class="u">分</span></div>
+      <div><label>行列の最大</label><input type="number" min="0" step="1" name="recQ"> <span class="u">人</span></div>
     </div>
 
-    <h3>3. お店（サービス）</h3>
-    <div class="row">
-      <div><label for="servers">窓口・鉄板の数 <small>（必須）</small></label><input id="servers" data-req placeholder="例：鉄板1枚"></div>
-      <div><label for="batch">1回に処理できる人数 <small>（必須）</small></label><input id="batch" data-req placeholder="例：3人分"></div>
-      <div><label for="service">サービス時間 <small>（必須）</small></label><input id="service" data-req placeholder="例：焼き時間5分（一定）"></div>
-    </div>
-    <label for="startRule">サービスを始めるルール <small>（必須）</small></label>
-    <textarea id="startRule" rows="2" data-req placeholder="例：待っている人がいて鉄板が空いていたら焼き始める。余った分は次に来た人に渡す"></textarea>
+    <div class="ws">ワークシート 3　班でモデルを設計しよう</div>
+    <h3>① 目的</h3>
+    <div class="opts" data-req data-l="① 目的"><label><input type="checkbox" name="purpose" value="去年の行列をシミュレーションで再現する">去年の行列をシミュレーションで再現する</label><label><input type="checkbox" name="purpose" value="そのあと、パラメータを変えて行列を短くする方法を試す">そのあと、パラメータを変えて行列を短くする方法を試す</label></div>
+    <label>その他</label><input name="purposeOther">
 
-    <h3>4. 時間と順番</h3>
-    <div class="row">
-      <div><label for="duration">シミュレーションする時間 <small>（必須）</small></label><input id="duration" data-req placeholder="例：180分（受付終了後は行列がなくなるまで続ける）"></div>
-      <div><label for="step">時間の進め方</label>
-        <select id="step"><option value="1分ずつ進める">1分ずつ進める</option><option value="お客さんが来たときや焼き上がったときなど、出来事ごとに進める">出来事ごとに進める</option></select></div>
-    </div>
-    <label for="order">1分ごとの処理の順番 <small>（フローチャートの順に）</small></label>
-    <textarea id="order" rows="5" placeholder="例：&#10;1. 乱数でお客さんが来たら行列に加える&#10;2. 焼いている途中なら残り時間を1減らし、0になったら余りを3増やす&#10;3. 余りがあれば先頭の人に渡し、待ち時間を記録する&#10;4. 鉄板が空いていて行列に人がいれば焼き始める&#10;5. 行列の最大人数を記録する&#10;6. 時刻を1分進める"></textarea>
-    <label for="vars">使う変数の名前と意味</label>
-    <textarea id="vars" rows="4" placeholder="例：&#10;eigyo：営業時間（分）&#10;kakuritsu：1分間に1人来る確率&#10;yaki_jikan：焼き時間（分）"></textarea>
+    <h3>② 去年の記録</h3>
+    <p class="hint">ワークシート2の「去年の結果」をそのまま使います（上の入力から自動で入ります）。</p>
 
-    <h3>5. 結果</h3>
-    <label for="waitdef">待ち時間の定義 <small>（必須）</small></label>
-    <input id="waitdef" data-req placeholder="例：並んだ時刻から、焼き上がって受け取った時刻まで">
-    <label>表示したいもの</label>
-    <div class="checks" id="outs">
-      <label><input type="checkbox" value="平均待ち時間" checked>平均待ち時間</label>
-      <label><input type="checkbox" value="最長の待ち時間" checked>最長の待ち時間</label>
-      <label><input type="checkbox" value="行列の最大人数" checked>行列の最大人数</label>
-      <label><input type="checkbox" value="売れた数（サービスした人数）">売れた数</label>
-      <label><input type="checkbox" value="時刻ごとの行列の人数の折れ線グラフ">グラフ：行列の人数の変化</label>
-      <label><input type="checkbox" value="一人ひとりの待ち時間の棒グラフ">グラフ：一人ひとりの待ち時間</label>
-    </div>
-    <div class="row">
-      <div><label for="trials">試行回数</label><input id="trials" placeholder="例：5回試して平均を出す"></div>
-      <div><label for="improve">比べたい改善案</label><input id="improve" placeholder="例：鉄板2枚、焼き時間4分"></div>
-    </div>
-    <label for="other">そのほかの条件・お願い</label>
-    <textarea id="other" rows="2" placeholder="例：途中で帰る人は考えない"></textarea>
+    <h3>③ 計算のしかた（時間をどう進めるか）</h3>
+    <div class="opts col" data-req data-l="③ 計算のしかた"><label><input type="radio" name="calc" value="each">お客さん1人ずつ、到着時刻・焼き始める時刻・受け取る時刻を計算する（教科書の表２と同じ）</label><label><input type="radio" name="calc" value="min">時刻を1分ずつ進めて、毎分の様子を調べる</label></div>
+
+    <h3>④ お客さん（到着）</h3>
+    <label>到着間隔のばらつきを、乱数でどう作るか</label>
+    <div class="opts col" data-req data-l="④ ばらつきの作り方"><label><input type="radio" name="dist" value="exp">指数分布：短い間隔が多く、ときどき長く空く（ばらばらにやってくる客に近い）</label><label><input type="radio" name="dist" value="uni">一様分布：0分〜平均の2倍の間で、どの長さも同じくらい出る</label><label><input type="radio" name="dist" value="prob">1分ごとに、ある確率（1 ÷ 平均の到着間隔）で1人来る</label></div>
+    <label>1人が買う量</label>
+    <div class="opts"><label><input type="radio" name="buy" value="1人1セット">1人1セット</label><label><input type="radio" name="buy" value="other">その他</label><input name="buyOther" class="mid"></div>
+
+    <h3>⑤ お店（たこ焼きを焼く）</h3>
+    <label>いつ焼き始めるか</label>
+    <div class="opts col" data-req data-l="⑤ いつ焼き始めるか"><label><input type="radio" name="start" value="待っている人がいて、鉄板が空いていたら焼き始める">待っている人がいて、鉄板が空いていたら焼き始める</label><label><input type="radio" name="start" value="お客さんがいなくても、休まず焼き続ける（作り置きする）">お客さんがいなくても、休まず焼き続ける（作り置きする）</label></div>
+    <label>誰から渡すか</label>
+    <div class="opts"><label><input type="radio" name="give" value="来た順に渡し、余った分は次に来た人に渡す">来た順に渡し、余った分は次に来た人に渡す</label><label><input type="radio" name="give" value="other">その他</label><input name="giveOther" class="mid"></div>
+    <label>受付を締め切ったあと</label>
+    <div class="opts"><label><input type="radio" name="close" value="並んでいる人には全員売る">並んでいる人には全員売る</label><label><input type="radio" name="close" value="締め切りの時刻で打ち切る">締め切りの時刻で打ち切る</label></div>
+
+    <h3>⑥ 処理の順番と変数 <small>（フローチャートで考えたことがあれば）</small></h3>
+    <label for="order">処理の順番</label>
+    <textarea id="order" name="order" rows="4"></textarea>
+    <label for="vars">ほかに使いたい変数と意味</label>
+    <textarea id="vars" name="vars" rows="2"></textarea>
+
+    <h3>⑦ 結果</h3>
+    <label>待ち時間は、いつからいつまでか</label>
+    <div class="opts col" data-req data-l="⑦ 待ち時間"><label><input type="radio" name="waitdef" value="並んでから、焼き上がって受け取るまで">並んでから、焼き上がって受け取るまで</label><label><input type="radio" name="waitdef" value="並んでから、焼き始めるまで（教科書と同じ）">並んでから、焼き始めるまで（教科書と同じ）</label></div>
+    <label>何回くり返して平均をとるか（試行回数）</label>
+    <div class="opts"><label><input type="radio" name="trials" value="1">1回</label><label><input type="radio" name="trials" value="10">10回</label><label><input type="radio" name="trials" value="100">100回</label><label><input type="radio" name="trials" value="200">200回</label><label><input type="radio" name="trials" value="other">その他</label><input type="number" min="1" step="1" name="trialsOther" class="short"> <span class="u">回</span></div>
+    <label>実行するたびに同じ乱数を出すか（乱数の種）</label>
+    <div class="opts col"><label><input type="radio" name="seed" value="same">同じにする（何度実行しても同じ結果になり、条件を変えたときに比べやすい）</label><label><input type="radio" name="seed" value="change">毎回変える（実行するたびに結果が変わる）</label></div>
+    <label>表示したいもの（いくつでも）</label>
+    <div class="opts"><label><input type="checkbox" name="outs" value="cmp">去年の記録との比較表</label><label><input type="checkbox" name="outs" value="spread">結果のばらつき（1回ごとの結果の幅）</label><label><input type="checkbox" name="outs" value="t30">30分ごとの表</label><label><input type="checkbox" name="outs" value="gq">行列の人数の変化のグラフ</label><label><input type="checkbox" name="outs" value="gh">平均待ち時間の分布のグラフ</label></div>
+    <label>あとで値を変えて試したい条件（いくつでも）</label>
+    <div class="opts"><label><input type="checkbox" name="change" value="鉄板の枚数">鉄板の枚数</label><label><input type="checkbox" name="change" value="焼き時間">焼き時間</label><label><input type="checkbox" name="change" value="1回に焼ける人数分">1回に焼ける人数分</label><label><input type="checkbox" name="change" value="平均の到着間隔">平均の到着間隔</label><label><input type="checkbox" name="change" value="焼き始めるルール">焼き始めるルール</label><label><input type="checkbox" name="change" value="other">その他</label><input name="changeOther" class="mid"></div>
+
+    <h3>⑧ モデルに入れない情報</h3>
+    <div class="opts"><label><input type="checkbox" name="exclude" value="価格">価格</label><label><input type="checkbox" name="exclude" value="材料">材料</label><label><input type="checkbox" name="exclude" value="場所・隣の店">場所・隣の店</label><label><input type="checkbox" name="exclude" value="係の人数">係の人数</label><label><input type="checkbox" name="exclude" value="会計・箱・仕上げ・渡しの時間">会計・箱・仕上げ・渡しの時間</label><label><input type="checkbox" name="exclude" value="「人が足りない」という意見">「人が足りない」という意見</label></div>
+    <label for="reason">そう判断した理由</label>
+    <textarea id="reason" name="reason" rows="2"></textarea>
 
     <div class="btns">
-      <button type="button" id="sample">見本（タコ丸）を入れる</button>
+      <button type="button" id="sample">見本（解答例）を入れる</button>
       <button type="button" id="reset">すべて消す</button>
     </div>
   </form>
