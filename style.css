@@ -67,6 +67,7 @@ input.mid{width:12em;display:inline-block}input.short{width:8em;display:inline-b
 .u{color:var(--mute);font-size:14px}
 .row input[type=number]{width:7em;display:inline-block}
 @media(max-width:600px){.ptab th{width:auto;display:block;border:0;padding-bottom:0}.ptab td{display:block}.ptab tr{display:block;border-bottom:1px solid var(--line)}}
+.refuse{margin-top:14px}.refuse textarea{font-size:14px}
 .steps{margin:6px 0 0;padding-left:1.3em;color:var(--mute);font-size:14px}
 /* tab2 */
 .status{font-size:14px;color:var(--mute);display:flex;align-items:center;gap:8px}

@@ -26,7 +26,7 @@ function isEmpty(d){return !Object.entries(d).some(([k,val])=>k!=='team'&&(Array
 function build(d){
   const c=calc(d);const L=[];const sec=(h,x)=>{if(x)L.push('',`【${h}】`,x)};
   const li=a=>a.filter(Boolean).join('\n');const has=x=>x!==undefined&&x!=='';
-  L.push('あなたは高校「情報Ⅰ」の学習を手伝うアシスタントです。次の設計にしたがって、待ち行列のシミュレーションを行う Python プログラムを作ってください。');
+  L.push('高校「情報Ⅰ」の授業「モデル化とシミュレーション」で、先生の指示により、班で設計した待ち行列のモデルをシミュレーションする Python プログラムを、生成AIに作ってもらう活動をしています。この活動のねらいは、生徒がプログラムを書くことではなく、AIが作ったプログラムが設計どおりかを、生徒が読んでテストして確かめることです。提出物や宿題ではありません。','','次の設計にしたがって、そのまま実行できる Python プログラムの全文を書いてください。');
   sec('目的',li([...d.purpose.map(x=>'- '+x),has(d.purposeOther)&&'- '+d.purposeOther]));
   sec('去年の記録（シミュレーションが去年を再現できているかの答え合わせに使う）',li([has(d.recTime)&&`- 営業時間：${d.recTime}分`,has(d.recN)&&`- 来た人数：${d.recN}人`,has(d.recAvg)&&`- 平均待ち時間：${d.recAvg}分`,has(d.recMax)&&`- 最長の待ち時間：${d.recMax}分`,has(d.recQ)&&`- 行列の最大人数：${d.recQ}人`]));
   sec('計算のしかた',CALC[d.calc]||'');
@@ -99,7 +99,8 @@ $('sample').addEventListener('click',()=>fill({recTime:'180',recN:'121',arrConst
 $('reset').addEventListener('click',()=>{if($('reset').dataset.c){fill({});delete $('reset').dataset.c;$('reset').textContent='すべて消す'}else{$('reset').dataset.c=1;$('reset').textContent='もう一度押すと消えます';setTimeout(()=>{delete $('reset').dataset.c;$('reset').textContent='すべて消す'},3000)}});
 async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch(_){}a.remove();return ok}}
 $('copy').addEventListener('click',async()=>{if(!$('prompt').value){toast('まだ何も入力されていません');return}toast(await copyText($('prompt').value)?'コピーしました。Copilot に貼り付けよう':'コピーできませんでした。プロンプトを選択してコピーしてください')});
-['openM365','openWeb'].forEach(id=>$(id).addEventListener('click',()=>{if($('prompt').value)copyText($('prompt').value).then(ok=>toast(ok?'コピーしました。開いた Copilot に貼り付けよう':'コピーできませんでした'))}));
+$('copyFollow').addEventListener('click',async()=>toast(await copyText($('followup').value)?'コピーしました。続けて貼り付けて送ろう':'コピーできませんでした'));
+['openM365','openWeb','openGPT'].forEach(id=>$(id).addEventListener('click',()=>{if($('prompt').value)copyText($('prompt').value).then(ok=>toast(ok?'コピーしました。開いた画面に貼り付けよう':'コピーできませんでした'))}));
 refresh();
 
 /* ---------- タブ2：Python 実行環境（Pyodide を Web Worker で動かす） ---------- */
